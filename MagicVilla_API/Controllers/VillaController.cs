@@ -4,6 +4,7 @@ using MagicVilla_API.Models.Dto;
 using MagicVilla_API.Models.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.Extensions.Logging;
 
@@ -22,9 +23,9 @@ namespace MagicVilla_API.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<VillaViewModel>> GetVillas()
+        public async Task<ActionResult<IEnumerable<VillaViewModel>>> GetVillas()
         {
-            var allVillas = _magicVillaDBContext.Villas.ToList();
+            var allVillas = await _magicVillaDBContext.Villas.ToListAsync();
             var allVillasViewModel = allVillas.Select(v => new VillaViewModel
             {
                 IdVilla = v.IdVilla,
@@ -39,7 +40,7 @@ namespace MagicVilla_API.Controllers
         }
 
         [HttpGet("{id:int}", Name = "GetVilla")]
-        public ActionResult<VillaViewModel> GetVilla(int id) 
+        public async Task<ActionResult<VillaViewModel>> GetVilla(int id) 
         {
             if (id == 0)
             {
@@ -47,7 +48,7 @@ namespace MagicVilla_API.Controllers
                 return BadRequest();
             }
 
-            var oneVilla = _magicVillaDBContext.Villas.FirstOrDefault(v => v.IdVilla == id);
+            var oneVilla = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
 
             if (oneVilla == null)
             {
@@ -68,13 +69,13 @@ namespace MagicVilla_API.Controllers
           
         }
         [HttpPost]
-        public ActionResult<VillaDto> CreateVilla( [FromBody] VillaDto villa)
+        public async Task<ActionResult<VillaDto>> CreateVilla( [FromBody] VillaDto villa)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var nameNewVillaExist = _magicVillaDBContext.Villas.FirstOrDefault(v => v.Name.ToLower() == villa.Name.ToLower()) != null;
+            var nameNewVillaExist = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.Name.ToLower() == villa.Name.ToLower()) != null;
             //var nameNewVillaExist = _magicVillaDBContext.Villas.FirstOrDefault(v => v.Name.ToLower() == villa.Name.ToLower()) != null ? true : false;
 
             if (nameNewVillaExist)
@@ -96,25 +97,25 @@ namespace MagicVilla_API.Controllers
                 UpdateTime = DateTime.Now
                 
             };
-            _magicVillaDBContext.Villas.Add(newVilla);
-            _magicVillaDBContext.SaveChanges();
+           await _magicVillaDBContext.Villas.AddAsync(newVilla);
+           await _magicVillaDBContext.SaveChangesAsync();
             
             return CreatedAtRoute("GetVilla", new { id = newVilla.IdVilla }, newVilla);
         }
         [HttpDelete("{id:int}")]
-        public IActionResult DeleteVilla(int id) 
+        public async Task<IActionResult> DeleteVilla(int id) 
         {
-            var villaToDelete = _magicVillaDBContext.Villas.FirstOrDefault(v => v.IdVilla == id);
+            var villaToDelete = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
             if (villaToDelete == null)
             {
                 return NotFound();
             }
-            _magicVillaDBContext.Villas.Remove(villaToDelete);  
-            _magicVillaDBContext.SaveChanges();
+           _magicVillaDBContext.Villas.Remove(villaToDelete);  
+           await _magicVillaDBContext.SaveChangesAsync();
             return NoContent();
         }
         [HttpPut("{id:int}")]
-        public IActionResult UpdateVilla(int id, [FromBody] VillaDto villaDto)
+        public async Task<IActionResult> UpdateVilla(int id, [FromBody] VillaDto villaDto)
         {
             if (!ModelState.IsValid)
             {
@@ -122,7 +123,7 @@ namespace MagicVilla_API.Controllers
             }
             
             
-            var villaToUpdate = _magicVillaDBContext.Villas.FirstOrDefault(v => v.IdVilla == id);
+            var villaToUpdate = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
             if (villaToUpdate == null)
             { return NotFound(); }
 
@@ -137,7 +138,7 @@ namespace MagicVilla_API.Controllers
             villaToUpdate.UpdateTime = DateTime.Now;
 
             _magicVillaDBContext.Villas.Update(villaToUpdate);
-            _magicVillaDBContext.SaveChanges();
+            await _magicVillaDBContext.SaveChangesAsync();
 
             return CreatedAtRoute("GetVilla", new { id = villaToUpdate.IdVilla }, villaToUpdate);
 
