@@ -1,6 +1,7 @@
 ﻿using MagicVilla_API.Data;
 using MagicVilla_API.Models;
 using MagicVilla_API.Models.Dto;
+using MagicVilla_API.Models.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
@@ -21,16 +22,24 @@ namespace MagicVilla_API.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<VillaDto>> GetVillas()
+        public ActionResult<IEnumerable<VillaViewModel>> GetVillas()
         {
-
             var allVillas = _magicVillaDBContext.Villas.ToList();
+            var allVillasViewModel = allVillas.Select(v => new VillaViewModel
+            {
+                IdVilla = v.IdVilla,
+                Name = v.Name,
+                Details = v.Details,
+                Price = v.Price,
+                ImageUrl = v.ImageUrl,
+                Amenity = v.Amenity
+            });
 
-            return Ok(allVillas);
+            return Ok(allVillasViewModel);
         }
 
         [HttpGet("{id:int}", Name = "GetVilla")]
-        public ActionResult<Villa> GetVilla(int id) 
+        public ActionResult<VillaViewModel> GetVilla(int id) 
         {
             if (id == 0)
             {
@@ -45,24 +54,36 @@ namespace MagicVilla_API.Controllers
                 return NotFound();
 
             }
-            return Ok(oneVilla);    
+
+            var oneVillasViewModel = new VillaViewModel
+            {
+                IdVilla = oneVilla.IdVilla,
+                Name = oneVilla.Name,
+                Details = oneVilla.Details,
+                Price = oneVilla.Price,
+                ImageUrl = oneVilla.ImageUrl,
+                Amenity = oneVilla.Amenity
+            };
+            return Ok(oneVillasViewModel);    
           
         }
         [HttpPost]
-        public ActionResult<VillaDto> CreateVilla(VillaDto villa)
+        public ActionResult<VillaDto> CreateVilla( [FromBody] VillaDto villa)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
+            var nameNewVillaExist = _magicVillaDBContext.Villas.FirstOrDefault(v => v.Name.ToLower() == villa.Name.ToLower()) != null;
+            //var nameNewVillaExist = _magicVillaDBContext.Villas.FirstOrDefault(v => v.Name.ToLower() == villa.Name.ToLower()) != null ? true : false;
 
-            if (_magicVillaDBContext.Villas.FirstOrDefault(v => v.Name.ToLower() == villa.Name.ToLower()) != null)
+            if (nameNewVillaExist)
             {
                 ModelState.AddModelError("ExistentName", "The name of villa that you are tray enter already exist");
                 return BadRequest(ModelState);
             }
 
-            Villa newVilla = new Villa() 
+            Villa newVilla = new () 
             {
                 Name = villa.Name, 
                 Details = villa.Details,
@@ -93,13 +114,14 @@ namespace MagicVilla_API.Controllers
             return NoContent();
         }
         [HttpPut("{id:int}")]
-        public IActionResult UpdateVilla(int id, VillaDto villaDto)
+        public IActionResult UpdateVilla(int id, [FromBody] VillaDto villaDto)
         {
-            if (villaDto == null)
+            if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
-
+            
+            
             var villaToUpdate = _magicVillaDBContext.Villas.FirstOrDefault(v => v.IdVilla == id);
             if (villaToUpdate == null)
             { return NotFound(); }
