@@ -3,6 +3,7 @@ using MagicVilla_API.Data;
 using MagicVilla_API.Models;
 using MagicVilla_API.Models.Dto;
 using MagicVilla_API.Models.ViewModels;
+using MagicVilla_API.Repositories.IRepositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,18 +18,18 @@ namespace MagicVilla_API.Controllers
     {
         private readonly ILogger<VillaController> _logger;
         private readonly IMapper _mapper;
-        private readonly MagicVillaDBContext _magicVillaDBContext;
-        public VillaController(ILogger<VillaController> logger, MagicVillaDBContext magicVillaDBContext, IMapper mapper)
+        private readonly IVillaRepository _villaRepo;
+        public VillaController(ILogger<VillaController> logger, IVillaRepository villaRepo, IMapper mapper)
         {
             _logger = logger;
-            _mapper = mapper;   
-            _magicVillaDBContext = magicVillaDBContext;
+            _mapper = mapper;
+            _villaRepo = villaRepo;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<VillaViewModel>>> GetVillas()
         {
-            IEnumerable<Villa>allVillas = await _magicVillaDBContext.Villas.ToListAsync();
+            IEnumerable<Villa>allVillas = await _villaRepo.GetAll();
 
             //Projecting from a list of Villa object to a list ofVilla VillaViewModel object without AutoMapper
             //var allVillasViewModel = allVillas.Select(v => new VillaViewModel
@@ -53,7 +54,7 @@ namespace MagicVilla_API.Controllers
                 return BadRequest();
             }
 
-            var oneVilla = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
+            var oneVilla = await _villaRepo.GetOne(v => v.IdVilla == id);
 
             if (oneVilla == null)
             {
@@ -80,7 +81,7 @@ namespace MagicVilla_API.Controllers
             {
                 return BadRequest(ModelState);
             }
-            var nameNewVillaExist = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.Name.ToLower() == villa.Name.ToLower()) != null;
+            var nameNewVillaExist = await _villaRepo.GetOne(v => v.Name.ToLower() == villa.Name.ToLower()) != null;
            
 
             if (nameNewVillaExist)
@@ -104,21 +105,22 @@ namespace MagicVilla_API.Controllers
                 
             //};
            Villa newVilla = _mapper.Map<Villa>(villa);
-           await _magicVillaDBContext.Villas.AddAsync(newVilla);
-           await _magicVillaDBContext.SaveChangesAsync();
+           await _villaRepo.Create(newVilla);
+           
             
             return CreatedAtRoute("GetVilla", new { id = newVilla.IdVilla }, newVilla);
         }
+
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteVilla(int id) 
         {
-            var villaToDelete = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
+            var villaToDelete = await _villaRepo.GetOne(v => v.IdVilla == id);
             if (villaToDelete == null)
             {
                 return NotFound();
             }
-           _magicVillaDBContext.Villas.Remove(villaToDelete);  
-           await _magicVillaDBContext.SaveChangesAsync();
+           await _villaRepo.Delete(villaToDelete);  
+           
             return NoContent();
         }
         [HttpPut("{id:int}")]
@@ -130,7 +132,7 @@ namespace MagicVilla_API.Controllers
             }
             
             
-            var villaToUpdate = await _magicVillaDBContext.Villas.FirstOrDefaultAsync(v => v.IdVilla == id);
+            var villaToUpdate = await _villaRepo.GetOne(v => v.IdVilla == id);
             if (villaToUpdate == null)
             { return NotFound(); }
 
@@ -141,8 +143,8 @@ namespace MagicVilla_API.Controllers
             villaToUpdate.CreationDate = DateTime.Now;
             villaToUpdate.UpdateTime = DateTime.Now;
 
-            _magicVillaDBContext.Villas.Update(villaToUpdate);
-            await _magicVillaDBContext.SaveChangesAsync();
+            await _villaRepo.UpdateVilla(villaToUpdate);
+            
 
             return CreatedAtRoute("GetVilla", new { id = villaToUpdate.IdVilla }, villaToUpdate);
 
